@@ -16,6 +16,10 @@ Hooks.once("init", async function() {
 		return clearDrawPathfinding();
 	}
 
+	game.generateNodeMap = function(){
+		return generateSceneNodeMapGrid();
+	}
+
 	// canvas.pathContainer = new PIXI.Container();
 
 
@@ -105,11 +109,16 @@ function getDiagonalMovementType(){
 
 function getDiagonalMovementCost(){
 	const diagonalMovementType = getDiagonalMovementType();
-	if(diagonalMovementType == "5105"){
+	if(diagonalMovementType == "555"){
+		return 1;
+	}
+	else if(diagonalMovementType == "5105"){
 		return 1.5;
 	}
 	else if(diagonalMovementType == "EUCL"){
 		return Math.sqrt(2);
+	} else {
+		return 1;
 	}
 }
 
@@ -121,12 +130,72 @@ function walkablePathfindingGraph(){
 	}
 }
 
-function generateScenePathfindingGraphGrid(){
-	const token = canvas.tokens.controlled[0];
-	if(!token){
-		ui.notifications.warn("No token Selected");
-		return;
+function generateSceneNodeMapGrid(){
+
+	// const distance = getTokenMoveDistance(token);
+	const gridCellSize = canvas.grid.size;
+	const canvasWidth = parseInt(canvas.grid.width/gridCellSize);
+	const canvasHeight = parseInt(canvas.grid.height/gridCellSize);
+	
+	// const nodeMap = new Array(canvasWidth).fill(new Array(canvasHeight));
+	const nodeMap = [...Array(canvasWidth)].map(e => Array(canvasHeight));;
+
+	for(let width = 0; width < canvasWidth; width++){
+		for(let height = 0; height < canvasHeight; height++){
+			nodeMap[width][height] = {
+				gridPosistion: {x:width, y:height},
+				neighbours: new Array(8)
+			};
+
+		}
 	}
+
+	for(let width = 0; width < canvasWidth; width++){
+		for(let height = 0; height < canvasHeight; height++){
+			let i = 0;
+			for(let x = -1; x <= 1; x++){
+				for(let y = -1; y <= 1; y++){
+					if(x == 0 && y == 0){
+						continue; //This is self
+					}
+
+					if(x + width < 0 || x + width >= canvasWidth || y + height < 0 || y + height >= canvasHeight){
+						//This is out of bounds
+						nodeMap[width][height].neighbours[i] = null;
+					} else {
+						// nodeMap[width][height].neighbours[i] = nodeMap[x + width][y + height];
+						nodeMap[width][height].neighbours[i] = {
+							node: nodeMap[x + width][y + height],
+							distance: costToEnterGrid(nodeMap[x + width][y + height], nodeMap[width][height] )
+						};
+					}
+					i++;
+				}
+			}
+		}	
+	}
+	
+	console.log("Node Map generated at game.nodeMap")
+	game.nodeMap = nodeMap;
+	return nodeMap;
+}
+
+function costToEnterGrid(targetGrid, fromGrid=false){
+
+	if(fromGrid){
+		let rayTest = new Ray(gridPointToCanvasPoint(fromGrid.gridPosistion), gridPointToCanvasPoint(targetGrid.gridPosistion));
+		if (CONFIG.Canvas.losBackend.testCollision(rayTest.A,rayTest.B, {mode:"any",type:'move'})){
+			return Math.Infinity;
+		} else {
+			if(targetGrid.gridPosistion.x != fromGrid.gridPosistion.x && targetGrid.gridPosistion.y != fromGrid.gridPosistion.y){
+				return getGridDistance() * getDiagonalMovementCost();
+			} else {
+				return getGridDistance();
+			}
+		}
+	}
+
+	return getGridDistance();
 }
 
 function generateWalkablePathfindingGraphGrid(){
@@ -141,7 +210,7 @@ function generateWalkablePathfindingGraphGrid(){
 	const gridCellSize = canvas.grid.size;
 	const rootNode = `${((token.x + token.hitArea.width/2) - Math.floor(gridCellSize/2)) / gridCellSize},${((token.y + token.hitArea.height/2) - Math.floor(gridCellSize/2)) / gridCellSize}`;
 	
-	//initilaise array of arrays 
+	//initialise array of arrays with values set as Infinity
 	const cost = new Array(parseInt(canvas.grid.width/gridCellSize)).fill(Infinity).map(() => new Array(parseInt(canvas.grid.height/gridCellSize)).fill(Infinity));
 	cost[((token.x + token.hitArea.width/2) - Math.floor(gridCellSize/2)) / gridCellSize][((token.y + token.hitArea.height/2) - Math.floor(gridCellSize/2)) / gridCellSize] = 0;
 	
