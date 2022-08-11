@@ -1,0 +1,26 @@
+{
+  "name": "pathfinding",
+  "description": "Pathfinding",
+  "author": "EndlesNights#9000",
+  "authors":[{
+    "name": "EndlesNights",
+    "url": "https://gitlab.com/EndlesNights",
+    "email": "endlesnights@gmail.com",
+    "discord": "endlesnights#9000"
+}],
+  "version": "0.0.0",
+  "title": "Pathfinding",
+  "minimumCoreVersion": "9",
+	"compatibleCoreVersion": "10",
+  "compatibility": {
+    "minimum": "9.268",
+    "verified": 10
+  },
+  "esmodules": [
+    "pathfinding.js"
+  ],
+   "socket": true,
+  "url": "https://gitlab.com/EndlesNights",
+  "manifest": "https://gitlab.com/EndlesNights",
+  "download": "https://gitlab.com/EndlesNights"
+}
