@@ -20,6 +20,10 @@ Hooks.once("init", async function() {
 		return generateSceneNodeMapGrid();
 	}
 
+	game.findPathGameNodeMap = function(targetGridPosistion, startGridPosistion){
+		return findPathGameNodeMap(targetGridPosistion, startGridPosistion);
+	}
+
 	// canvas.pathContainer = new PIXI.Container();
 
 
@@ -50,10 +54,10 @@ function getSelectedToken(){
 }
 
 function getGridCellSize(){
-	return canvas.grid.size;
+	return canvas.scene.grid.size;
 }
 
-function getGridDistance(){
+function getSceneGridDistance(){
 	return canvas.scene.grid.distance;
 }
 
@@ -107,7 +111,7 @@ function getDiagonalMovementType(){
 	return game.settings.get(gameSystemId, "diagonalMovement");
 }
 
-function getDiagonalMovementCost(){
+function getDiagonalMovementCostMultiplier(){
 	const diagonalMovementType = getDiagonalMovementType();
 	if(diagonalMovementType == "555"){
 		return 1;
@@ -144,7 +148,10 @@ function generateSceneNodeMapGrid(){
 		for(let height = 0; height < canvasHeight; height++){
 			nodeMap[width][height] = {
 				gridPosistion: {x:width, y:height},
-				neighbours: new Array(8)
+				neighbours: new Array(8),
+				gCost: Infinity,
+				hCost: 0,
+				fCost: Infinity
 			};
 
 		}
@@ -180,22 +187,156 @@ function generateSceneNodeMapGrid(){
 	return nodeMap;
 }
 
-function costToEnterGrid(targetGrid, fromGrid=false){
+function costToEnterGrid(targetGrid, startGrid=false){
 
-	if(fromGrid){
-		let rayTest = new Ray(gridPointToCanvasPoint(fromGrid.gridPosistion), gridPointToCanvasPoint(targetGrid.gridPosistion));
+	if(startGrid){
+		let rayTest = new Ray(gridPointToCanvasPoint(startGrid.gridPosistion), gridPointToCanvasPoint(targetGrid.gridPosistion));
 		if (CONFIG.Canvas.losBackend.testCollision(rayTest.A,rayTest.B, {mode:"any",type:'move'})){
-			return Math.Infinity;
+			return Infinity;
 		} else {
-			if(targetGrid.gridPosistion.x != fromGrid.gridPosistion.x && targetGrid.gridPosistion.y != fromGrid.gridPosistion.y){
-				return getGridDistance() * getDiagonalMovementCost();
+			if(targetGrid.gridPosistion.x != startGrid.gridPosistion.x && targetGrid.gridPosistion.y != startGrid.gridPosistion.y){
+				return getSceneGridDistance() * getDiagonalMovementCostMultiplier();
 			} else {
-				return getGridDistance();
+				return getSceneGridDistance();
 			}
 		}
 	}
 
-	return getGridDistance();
+	return getSceneGridDistance();
+}
+
+// a* pathfinding
+function findPathGameNodeMap(targetGridPosistion, startGridPosistion){
+	if(!game.nodeMap){
+		ui.notifications.warn("No Node Map. Please generate one first to game.nodeMap, pass a valid map to the findPath function.");
+		return null;
+	}
+
+	const nodeMap = game.nodeMap;
+	const openList = [];
+	const closeList = [];
+
+	const startNode = game.nodeMap[startGridPosistion.x][startGridPosistion.y];
+	const endNode = game.nodeMap[targetGridPosistion.x][targetGridPosistion.y];
+	openList.push(startNode);
+
+	const gridCellSize = canvas.grid.size;
+	const canvasWidth = parseInt(canvas.grid.width/gridCellSize);
+	const canvasHeight = parseInt(canvas.grid.height/gridCellSize);
+	//clear all pathing cost data
+	for(let width = 0; width < canvasWidth; width++){
+		for(let height = 0; height < canvasHeight; height++){
+			nodeMap[width][height].gCost = Infinity;
+			nodeMap[width][height].hCost = 0;
+			nodeMap[width][height].fCost = Infinity;
+			nodeMap[width][height].cameFromNode = null;
+		}
+	}
+
+	startNode.gCost = 0;
+	startNode.hCost = 50; // just a random number at the start
+	startNode.fCost = startNode.gCost + startNode.hCost;
+
+
+	while(openList.length){
+		const currentNode = getLowestFCostNode(openList, closeList);
+		// if(equateNodes(currentNode, endNode)){
+		if(currentNode == endNode){
+			return traceBackPath(endNode);
+		}
+
+		console.log(currentNode)
+		for(const neighbour of currentNode.neighbours){
+			if(!neighbour) continue; //don't search through empty nodes
+
+			// if(checkNodeInArray(neighbourNode, closeList)){
+			if(closeList.includes(neighbour.node)){
+				continue; // This node has already been searched before
+			}
+
+			//TODO Add checks here to see if this node can be walked on, if there are other tokens or tiles on it that may prevent movement
+
+			let potentialGCost = currentNode.gCost + calculateDistance(currentNode, endNode);
+			console.log(potentialGCost)
+			console.log(neighbour.node)
+			if(potentialGCost < neighbour.node.gCost){
+				neighbour.node.cameFromNode = currentNode;
+				neighbour.node.gCost = potentialGCost;
+				neighbour.node.hCost = calculateDistance(neighbour.node, endNode);
+				neighbour.node.fCost = neighbour.node.gCost + neighbour.node.hCost;
+
+				//TODO, test this out. Might have to manualy check? Cant rember if this works in JS with objects
+				if(!openList.includes(neighbour.node)){
+					openList.push(neighbour.node);
+				}
+			}
+		}
+	}
+
+	//No Valid Path to target from start
+	console.log(`No Path found from: ${startGridPosistion.x},${startGridPosistion.y} to ${targetGridPosistion.x},${targetGridPosistion.y}`)
+	return null;
+}
+
+function calculateDistance(nodeA, nodeB){
+	const xDistance = Math.abs(nodeA.gridPosistion.x - nodeB.gridPosistion.x);
+	const yDistance = Math.abs(nodeA.gridPosistion.y - nodeB.gridPosistion.y);
+	const remaining = Math.abs(xDistance - yDistance);
+
+	const moveBaseCost = getSceneGridDistance();
+	// const moveDiagonalCostMultiplier = getDiagonalMovementCostMultiplier();
+	const moveDiagonalCostMultiplier = getDiagonalMovementCostMultiplier()-1;
+
+	//TODO, add checks here for tile terrian costs for the tile that you enter.
+	
+
+	return moveDiagonalCostMultiplier * moveBaseCost * Math.min(xDistance, yDistance) + moveBaseCost * remaining;
+
+	// if(remaining == 1){ // true is not diagonal movement
+	// 	return moveBaseCost;
+	// } else if (remaining == 0){
+	// 	return moveDiagonalCostMultiplier * moveBaseCost;
+	// } else {
+	// 	return moveDiagonalCostMultiplier * moveBaseCost * Math.min(xDistance, yDistance) + moveBaseCost * remaining;
+	// }
+
+	// return moveDiagonalCostMultiplier * Math.min(xDistance, yDistance) + moveBaseCost * remaining;
+}
+
+function getLowestFCostNode(openList, closeList){
+	let lowestNode = openList[0];
+	let indexOfLowest = 0;
+	let index;
+	for(const node of openList){
+		if(node.fCost < lowestNode.fCost){
+			lowestNode = node;
+			indexOfLowest = index;
+		}
+		index ++;
+	}
+
+	//remove lowest from the openList Array
+	openList.splice(indexOfLowest, 1);
+	closeList.push(lowestNode);
+	return lowestNode;
+}
+
+function traceBackPath(endNode){
+	let pathNodeArray = [];
+	pathNodeArray.push(endNode);
+
+	let currentNode = endNode;
+
+	while(currentNode.cameFromNode){
+		pathNodeArray.push(currentNode.cameFromNode);
+		currentNode = currentNode.cameFromNode;
+	}
+
+	return pathNodeArray.reverse();
+}
+
+function equateNodes(nodeA, nodeB){
+	return (nodeA.gridPosistion.x === nodeB.gridPosistion.x && nodeA.gridPosistion.y === nodeB.gridPosistion.y)
 }
 
 function generateWalkablePathfindingGraphGrid(){
@@ -245,9 +386,9 @@ function generateWalkablePathfindingGraphGrid(){
 					// }
 
 					if(Math.abs(x) == Math.abs(y) && getDiagonalMovementType() != "555"){ // check for diagnals
-						const constToEnter = getGridDistance() * getDiagonalMovementCost();
+						const constToEnter = getSceneGridDistance() * getDiagonalMovementCostMultiplier();
 				
-						if(cost[neighbourX][neighbourY] > constToEnter + cost[nodeX][nodeY] - getGridDistance() * 0.5 && distance >= constToEnter + cost[nodeX][nodeY] - getGridDistance() * 0.5){
+						if(cost[neighbourX][neighbourY] > constToEnter + cost[nodeX][nodeY] - getSceneGridDistance() * 0.5 && distance >= constToEnter + cost[nodeX][nodeY] - getSceneGridDistance() * 0.5){
 							cost[neighbourX][neighbourY] = cost[nodeX][nodeY] + constToEnter;
 							toCheckHolder.add(`${neighbourX},${neighbourY}`);
 							canEnter.add(`${neighbourX}, ${neighbourY}`);
@@ -256,7 +397,7 @@ function generateWalkablePathfindingGraphGrid(){
 								canEnterRunning.delete(`${neighbourX}, ${neighbourY}`);
 							}
 						}
-						else if(cost[neighbourX][neighbourY] > constToEnter + cost[nodeX][nodeY] - getGridDistance() * 0.5 && distance*2 >= constToEnter + cost[nodeX][nodeY] - getGridDistance() * 0.5){
+						else if(cost[neighbourX][neighbourY] > constToEnter + cost[nodeX][nodeY] - getSceneGridDistance() * 0.5 && distance*2 >= constToEnter + cost[nodeX][nodeY] - getSceneGridDistance() * 0.5){
 							cost[neighbourX][neighbourY] = cost[nodeX][nodeY] + constToEnter;
 							toCheckHolder.add(`${neighbourX},${neighbourY}`);
 
@@ -266,8 +407,8 @@ function generateWalkablePathfindingGraphGrid(){
 						}
 
 					} else {
-						const constToEnter = getGridDistance();
-						if(cost[neighbourX][neighbourY] > constToEnter + cost[nodeX][nodeY] - getGridDistance() * 0.5 && distance >= constToEnter + cost[nodeX][nodeY]- getGridDistance() * 0.5){
+						const constToEnter = getSceneGridDistance();
+						if(cost[neighbourX][neighbourY] > constToEnter + cost[nodeX][nodeY] - getSceneGridDistance() * 0.5 && distance >= constToEnter + cost[nodeX][nodeY]- getSceneGridDistance() * 0.5){
 							cost[neighbourX][neighbourY] = cost[nodeX][nodeY] + constToEnter;
 							toCheckHolder.add(`${neighbourX},${neighbourY}`);
 							canEnter.add(`${neighbourX}, ${neighbourY}`);
@@ -276,7 +417,7 @@ function generateWalkablePathfindingGraphGrid(){
 								canEnterRunning.delete(`${neighbourX}, ${neighbourY}`);
 							}
 						}
-						else if(cost[neighbourX][neighbourY] > constToEnter + cost[nodeX][nodeY] - getGridDistance() * 0.5 && distance*2 >= constToEnter + cost[nodeX][nodeY] - getGridDistance() * 0.5){
+						else if(cost[neighbourX][neighbourY] > constToEnter + cost[nodeX][nodeY] - getSceneGridDistance() * 0.5 && distance*2 >= constToEnter + cost[nodeX][nodeY] - getSceneGridDistance() * 0.5){
 							cost[neighbourX][neighbourY] = cost[nodeX][nodeY] + constToEnter;
 							toCheckHolder.add(`${neighbourX},${neighbourY}`);
 							canEnterRunning.add(`${neighbourX}, ${neighbourY}`);
