@@ -1,573 +1,662 @@
 
 Hooks.once("init", async function() {
-	console.log("Pathfinding Loaded")
+	console.log("Pathfinding Module Loaded")
 
-	game.pathfinding = function(debug=false){
-		const graph = walkablePathfindingGraph();
-		console.log(graph)
-		drawWalkablePathfindingGraph(graph, debug);
-	}
+	game.Pathfinding = Pathfinding;
 
-	game.getPathfindingGraph = function(){
-		return walkablePathfindingGraph();
-	}
+	// game.pathfinding = function(debug=false){
+	// 	const graph = walkablePathfindingGraph();
+	// 	console.log(graph)
+	// 	drawWalkablePathfindingGraph(graph, debug);
+	// }
 
-	game.clearPathfinding = function(){
-		return clearDrawPathfinding();
-	}
+	// game.getPathfindingGraph = function(){
+	// 	return walkablePathfindingGraph();
+	// }
 
-	game.generateNodeMap = function(){
-		return generateSceneNodeMapGrid();
-	}
+	// game.clearPathfinding = function(){
+	// 	return clearDrawPathfinding();
+	// }
 
-	game.findPathGameNodeMap = function(targetGridPosistion, startGridPosistion){
-		return findPathGameNodeMap(targetGridPosistion, startGridPosistion);
-	}
+	// game.generateNodeMap = function(){
+	// 	return generateSceneNodeMapGrid();
+	// }
 
-	// canvas.pathContainer = new PIXI.Container();
+	// game.findPathGameNodeMap = function(targetGridPosistion, startGridPosistion){
+	// 	return findPathGameNodeMap(targetGridPosistion, startGridPosistion);
+	// }
+
+	// game.drawPathGameNodeMap = function(path, debug=false){
+	// 	drawPathGrid(path,debug);
+	// }
+
+	// game.drawGridNumbers = function(){
+	// 	gridCordToCanvasCord();
+	// }
+	
 
 
-	// canvas.environment.children[0].children.push(pathContainer)
-	// canvas.environment.children[0].children
+
+
+
+
+// game.clearPathfinding();
+// game.generateNodeMap();
+
+
+// const tokenPos = canvas.grid.grid.getGridPositionFromPixels(
+// 	x:canvas.tokens.controlled[0].x,
+// 	y:canvas.tokens.controlled[0].y
+// 	);
+
+// const mousePos = canvas.app.renderer.plugins.interaction.mouse.getLocalPosition(canvas.stage); 
+
+// // const path = game.findPathGameNodeMap({x:8,y:11},{x:12,y:12});
+// const path = game.findPathGameNodeMap(tokenPos,mousePos);
+// game.drawPathGameNodeMap(path, true);
+
+// console.log(path)
 });
 
 
 // pathfinding();
 
-function clearDrawPathfinding(){
-	if(!canvas.drawPathfinding) return;
+export class Pathfinding{
 
-	for(let i = canvas.drawPathfinding.length; i > 0; i--){	
-		canvas.drawPathfinding[i-1].destroy();
-		canvas.drawPathfinding.pop();
+	static clearDrawPathfinding(){
+		if(canvas.drawPathfinding){
+			for(let i = canvas.drawPathfinding.length; i > 0; i--){	
+				canvas.drawPathfinding[i-1].destroy();
+				canvas.drawPathfinding.pop();
+			}
+		}
+
+		if(canvas.drawPathfindingDebug){
+			for(let i = canvas.drawPathfindingDebug.length; i > 0; i--){	
+				canvas.drawPathfindingDebug[i-1].destroy();
+				canvas.drawPathfindingDebug.pop();
+			}
+		}
 	}
 
-	for(let i = canvas.drawPathfindingDebug.length; i > 0; i--){	
-		canvas.drawPathfindingDebug[i-1].destroy();
-		canvas.drawPathfindingDebug.pop();
+	static getSelectedToken(){
+		return actor = canvas.tokens.controlled[0];
 	}
 
-}
+	static getGridCellSize(){
+		return canvas.scene.grid.size;
+	}
 
-function getSelectedToken(){
-	return actor = canvas.tokens.controlled[0];
-}
+	static getSceneGridDistance(){
+		return canvas.scene.grid.distance;
+	}
 
-function getGridCellSize(){
-	return canvas.scene.grid.size;
-}
+	static gridCornerToCenter(point={}, token={}){
+		if(Object.keys(point).length){
+			return{
+				x: point.x + getGridCellSize() / 2,
+				y: point.y + getGridCellSize() / 2
+			}
+		}
 
-function getSceneGridDistance(){
-	return canvas.scene.grid.distance;
-}
+		if(Object.keys(token).length){
+			return{
+				x: token.x + token.w / 2,
+				y: token.y + token.h / 2
+			}
+		}
+	}
 
-function gridCornerToCenter(point={}, token={}){
-	if(Object.keys(point).length){
+	static worldPosToGridPos(worldPos){
+		return {
+			x: Math.ceil(worldPos.x / getGridCellSize()),
+			y: Math.ceil(worldPos.y / getGridCellSize())
+		}
+	}
+
+	// to the corner of the grid
+	static gridPosToWorldPos(gridPoint){
 		return{
-			x: point.x + getGridCellSize() / 2,
-			y: point.y + getGridCellSize() / 2
+			x: gridPoint.x * getGridCellSize(),
+			y: gridPoint.y * getGridCellSize()
 		}
 	}
 
-	if(Object.keys(token).length){
-		return{
-			x: token.x + token.w / 2,
-			y: token.y + token.h / 2
+	static gridPosToWorldPosCenter(gridPoint){
+		return gridPosToWorldPos(gridPoint);
+	}
+
+	static pointToString(point){
+		return `${point.x},${point.y}`;
+	}
+
+	static getDiagonalMovementType(){
+		const gameSystemId = game.system.id;
+		switch(gameSystemId){
+			case "dnd5e":
+				return game.settings.get(gameSystemId, "diagonalMovement");
+			case "dnd4e":
+				return game.settings.get(gameSystemId, "diagonalMovement");
 		}
+		return game.settings.get(gameSystemId, "diagonalMovement");
 	}
-}
 
-function worldPosToGridPos(worldPos){
-	return {
-		x: Math.floor(worldPos.x / getGridCellSize()),
-		y: Math.floor(worldPos.y / getGridCellSize())
-	}
-}
-
-// to the corner of the grid
-function gridPosToWorldPos(gridPoint){
-	return{
-		x: gridPoint.x * getGridCellSize(),
-		y: gridPoint.y * getGridCellSize()
-	}
-}
-
-function gridPosToWorldPosCenter(gridPoint){
-	return gridPosToWorldPos(gridPoint);
-}
-
-function pointToString(point){
-	return `${point.x},${point.y}`;
-}
-
-function getDiagonalMovementType(){
-	const gameSystemId = game.system.id;
-	switch(gameSystemId){
-		case "dnd5e":
-			return game.settings.get(gameSystemId, "diagonalMovement");
-		case "dnd4e":
-			return game.settings.get(gameSystemId, "diagonalMovement");
-	}
-	return game.settings.get(gameSystemId, "diagonalMovement");
-}
-
-function getDiagonalMovementCostMultiplier(){
-	const diagonalMovementType = getDiagonalMovementType();
-	if(diagonalMovementType == "555"){
-		return 1;
-	}
-	else if(diagonalMovementType == "5105"){
-		return 1.5;
-	}
-	else if(diagonalMovementType == "EUCL"){
-		return Math.sqrt(2);
-	} else {
-		return 1;
-	}
-}
-
-function walkablePathfindingGraph(){
-	if(canvas.grid.type == 1){
-		return generateWalkablePathfindingGraphGrid();
-	} else {
-		return generateWalkablePathfindingGraphGrid();
-	}
-}
-
-function generateSceneNodeMapGrid(){
-
-	// const distance = getTokenMoveDistance(token);
-	const gridCellSize = canvas.grid.size;
-	const canvasWidth = parseInt(canvas.grid.width/gridCellSize);
-	const canvasHeight = parseInt(canvas.grid.height/gridCellSize);
-	
-	// const nodeMap = new Array(canvasWidth).fill(new Array(canvasHeight));
-	const nodeMap = [...Array(canvasWidth)].map(e => Array(canvasHeight));;
-
-	for(let width = 0; width < canvasWidth; width++){
-		for(let height = 0; height < canvasHeight; height++){
-			nodeMap[width][height] = {
-				gridPosistion: {x:width, y:height},
-				neighbours: new Array(8),
-				gCost: Infinity,
-				hCost: 0,
-				fCost: Infinity
-			};
-
+	static getDiagonalMovementCostMultiplier(){
+		const diagonalMovementType = this.getDiagonalMovementType();
+		if(diagonalMovementType == "555"){
+			return 1;
+		}
+		else if(diagonalMovementType == "5105"){
+			return 1.5;
+		}
+		else if(diagonalMovementType == "EUCL"){
+			return Math.round(Math.sqrt(2)*1000)/1000;
+			// return Math.round(Math.sqrt(2)*1000)/1000;
+		} else {
+			return 1;
 		}
 	}
 
-	for(let width = 0; width < canvasWidth; width++){
-		for(let height = 0; height < canvasHeight; height++){
-			let i = 0;
-			for(let x = -1; x <= 1; x++){
-				for(let y = -1; y <= 1; y++){
-					if(x == 0 && y == 0){
-						continue; //This is self
+	static walkablePathfindingGraph(){
+		if(canvas.grid.type == 1){
+			return this.generateWalkablePathfindingGraphGrid();
+		} else {
+			return this.generateWalkablePathfindingGraphGrid();
+		}
+	}
+
+	static generateSceneNodeMapGrid(){
+
+		// const distance = getTokenMoveDistance(token);
+		const gridCellSize = canvas.grid.size;
+		const canvasWidth = parseInt(canvas.grid.width/gridCellSize);
+		const canvasHeight = parseInt(canvas.grid.height/gridCellSize);
+		
+		// const nodeMap = new Array(canvasWidth).fill(new Array(canvasHeight));
+		const nodeMap = [...Array(canvasWidth)].map(e => Array(canvasHeight));;
+
+		for(let width = 0; width < canvasWidth; width++){
+			for(let height = 0; height < canvasHeight; height++){
+				nodeMap[width][height] = {
+					gridPosistion: {x:width, y:height},
+					neighbours: new Array(8),
+					gCost: 0, 	// distance from starting node
+					hCost: 0, 	// distance from target node
+					fCost: 0 	//gCost + hCost
+				};
+
+			}
+		}
+
+		for(let width = 0; width < canvasWidth; width++){
+			for(let height = 0; height < canvasHeight; height++){
+				let i = 0;
+				for(let x = -1; x <= 1; x++){
+					for(let y = -1; y <= 1; y++){
+						if(x == 0 && y == 0){
+							continue; //This is self
+						}
+
+						if(x + width < 0 || x + width >= canvasWidth || y + height < 0 || y + height >= canvasHeight){
+							//This is out of bounds
+							nodeMap[width][height].neighbours[i] = null;
+						} else {
+							// nodeMap[width][height].neighbours[i] = nodeMap[x + width][y + height];
+							const distance = this.costToEnterGrid(nodeMap[x + width][y + height], nodeMap[width][height]);
+							if(distance == Infinity){
+								nodeMap[width][height].neighbours[i] = null;
+							} else {
+								nodeMap[width][height].neighbours[i] = {
+									node: nodeMap[x + width][y + height],
+									distance: this.costToEnterGrid(nodeMap[x + width][y + height], nodeMap[width][height] )
+								};
+							}
+
+						}
+						i++;
 					}
+				}
+			}	
+		}
+		
+		console.log("Node Map generated at game.nodeMap")
+		game.nodeMap = nodeMap;
+		return nodeMap;
+	}
 
-					if(x + width < 0 || x + width >= canvasWidth || y + height < 0 || y + height >= canvasHeight){
-						//This is out of bounds
-						nodeMap[width][height].neighbours[i] = null;
-					} else {
-						// nodeMap[width][height].neighbours[i] = nodeMap[x + width][y + height];
-						nodeMap[width][height].neighbours[i] = {
-							node: nodeMap[x + width][y + height],
-							distance: costToEnterGrid(nodeMap[x + width][y + height], nodeMap[width][height] )
-						};
-					}
-					i++;
+	static costToEnterGrid(targetGrid, startGrid=false){
+
+		if(startGrid){
+			let rayTest = new Ray(this.gridPointToCanvasPoint(startGrid.gridPosistion), this.gridPointToCanvasPoint(targetGrid.gridPosistion));
+			if (CONFIG.Canvas.losBackend.testCollision(rayTest.A,rayTest.B, {mode:"any",type:'move'})){
+				return Infinity;
+			} else {
+				if(targetGrid.gridPosistion.x != startGrid.gridPosistion.x && targetGrid.gridPosistion.y != startGrid.gridPosistion.y){
+					return Math.round(this.getSceneGridDistance() * this.getDiagonalMovementCostMultiplier()*1000)/1000;
+				} else {
+					return this.getSceneGridDistance();
 				}
 			}
-		}	
+		}
+
+		return this.getSceneGridDistance();
 	}
-	
-	console.log("Node Map generated at game.nodeMap")
-	game.nodeMap = nodeMap;
-	return nodeMap;
-}
 
-function costToEnterGrid(targetGrid, startGrid=false){
+	// a* pathfinding
+	static findPathGameNodeMap(targetGridPosistion, startGridPosistion){
+		if(!game.nodeMap){
+			ui.notifications.warn("No Node Map. Please generate one first to game.nodeMap, pass a valid map to the findPath static.");
+			return null;
+		}
 
-	if(startGrid){
-		let rayTest = new Ray(gridPointToCanvasPoint(startGrid.gridPosistion), gridPointToCanvasPoint(targetGrid.gridPosistion));
-		if (CONFIG.Canvas.losBackend.testCollision(rayTest.A,rayTest.B, {mode:"any",type:'move'})){
-			return Infinity;
-		} else {
-			if(targetGrid.gridPosistion.x != startGrid.gridPosistion.x && targetGrid.gridPosistion.y != startGrid.gridPosistion.y){
-				return getSceneGridDistance() * getDiagonalMovementCostMultiplier();
-			} else {
-				return getSceneGridDistance();
+		const nodeMap = game.nodeMap;
+		const openList = [];
+		const closeList = [];
+
+		// SquareGrid#getGridPositionFromPixels swaps around the X,Y to Y,X for big brain logic
+		const startNode = Array.isArray(startGridPosistion) ? game.nodeMap[startGridPosistion[1]][startGridPosistion[0]] : game.nodeMap[startGridPosistion.x][startGridPosistion.y];
+		const endNode = Array.isArray(targetGridPosistion) ? game.nodeMap[targetGridPosistion[1]][targetGridPosistion[0]] : game.nodeMap[targetGridPosistion.x][targetGridPosistion.y];
+		openList.push(startNode);
+
+		this.resetNodeMapPathingValues(nodeMap);
+
+		startNode.gCost = 0;
+		startNode.hCost = this.calculateDistance(startNode, endNode); // just a random number at the start
+		startNode.fCost = startNode.gCost + startNode.hCost;
+
+
+		while(openList.length > 0){
+			const currentNode = this.getLowestFCostNode(openList, closeList);
+			// if(equateNodes(currentNode, endNode)){
+			if(currentNode == endNode){
+				return this.traceBackPath(endNode);
+			}
+
+			for(const neighbour of currentNode.neighbours){
+				if(!neighbour) continue; //don't search through empty nodes
+
+				// if(checkNodeInArray(neighbourNode, closeList)){
+				if(closeList.includes(neighbour.node)){
+					continue; // This node has already been searched before
+				}
+
+				//TODO Add checks here to see if this node can be walked on, if there are other tokens or tiles on it that may prevent movement
+
+				let potentialGCost = currentNode.gCost + this.calculateDistance(currentNode, neighbour.node);
+				
+				// let potentialGCost = currentNode.gCost + this.costToEnterGrid(currentNode, neighbour.node);
+
+				if(potentialGCost < neighbour.node.gCost){
+					neighbour.node.parent = currentNode;
+					neighbour.node.gCost = potentialGCost;
+					neighbour.node.hCost = this.calculateDistance(neighbour.node, endNode);
+					// neighbour.node.hCost = this.costToEnterGrid(neighbour.node, endNode)
+					neighbour.node.fCost = neighbour.node.gCost + neighbour.node.hCost;
+
+					if(!openList.includes(neighbour.node)){
+						openList.push(neighbour.node);
+					}
+				}
 			}
 		}
-	}
 
-	return getSceneGridDistance();
-}
-
-// a* pathfinding
-function findPathGameNodeMap(targetGridPosistion, startGridPosistion){
-	if(!game.nodeMap){
-		ui.notifications.warn("No Node Map. Please generate one first to game.nodeMap, pass a valid map to the findPath function.");
+		//No Valid Path to target from start
+		console.log(`No Path found from: ${startGridPosistion.x},${startGridPosistion.y} to ${targetGridPosistion.x},${targetGridPosistion.y}`)
 		return null;
 	}
 
-	const nodeMap = game.nodeMap;
-	const openList = [];
-	const closeList = [];
+	static resetNodeMapPathingValues(nodeMap){
+		const gridCellSize = canvas.grid.size;
+		const canvasWidth = parseInt(canvas.grid.width/gridCellSize);
+		const canvasHeight = parseInt(canvas.grid.height/gridCellSize);
 
-	const startNode = game.nodeMap[startGridPosistion.x][startGridPosistion.y];
-	const endNode = game.nodeMap[targetGridPosistion.x][targetGridPosistion.y];
-	openList.push(startNode);
-
-	const gridCellSize = canvas.grid.size;
-	const canvasWidth = parseInt(canvas.grid.width/gridCellSize);
-	const canvasHeight = parseInt(canvas.grid.height/gridCellSize);
-	//clear all pathing cost data
-	for(let width = 0; width < canvasWidth; width++){
-		for(let height = 0; height < canvasHeight; height++){
-			nodeMap[width][height].gCost = Infinity;
-			nodeMap[width][height].hCost = 0;
-			nodeMap[width][height].fCost = Infinity;
-			nodeMap[width][height].cameFromNode = null;
+		//clear all pathing cost data
+		for(let width = 0; width < canvasWidth; width++){
+			for(let height = 0; height < canvasHeight; height++){
+				nodeMap[width][height].gCost = Infinity;
+				nodeMap[width][height].hCost = 0;
+				nodeMap[width][height].fCost = Infinity;
+				nodeMap[width][height].parent = null;
+			}
 		}
 	}
 
-	startNode.gCost = 0;
-	startNode.hCost = 50; // just a random number at the start
-	startNode.fCost = startNode.gCost + startNode.hCost;
+	static calculateDistance(nodeA, nodeB){
 
 
-	while(openList.length){
-		const currentNode = getLowestFCostNode(openList, closeList);
-		// if(equateNodes(currentNode, endNode)){
-		if(currentNode == endNode){
-			return traceBackPath(endNode);
-		}
-
-		console.log(currentNode)
-		for(const neighbour of currentNode.neighbours){
-			if(!neighbour) continue; //don't search through empty nodes
-
-			// if(checkNodeInArray(neighbourNode, closeList)){
-			if(closeList.includes(neighbour.node)){
-				continue; // This node has already been searched before
-			}
-
-			//TODO Add checks here to see if this node can be walked on, if there are other tokens or tiles on it that may prevent movement
-
-			let potentialGCost = currentNode.gCost + calculateDistance(currentNode, endNode);
-			console.log(potentialGCost)
-			console.log(neighbour.node)
-			if(potentialGCost < neighbour.node.gCost){
-				neighbour.node.cameFromNode = currentNode;
-				neighbour.node.gCost = potentialGCost;
-				neighbour.node.hCost = calculateDistance(neighbour.node, endNode);
-				neighbour.node.fCost = neighbour.node.gCost + neighbour.node.hCost;
-
-				//TODO, test this out. Might have to manualy check? Cant rember if this works in JS with objects
-				if(!openList.includes(neighbour.node)){
-					openList.push(neighbour.node);
+		if(nodeA.neighbours){
+			for(const neighbour of nodeA.neighbours){
+				if(!neighbour) continue;
+				if(neighbour.node === nodeB){
+					return neighbour.distance;
 				}
 			}
 		}
+		
+		const ray = new Ray(this.gridPointToCanvasPoint(nodeA.gridPosistion), this.gridPointToCanvasPoint(nodeB.gridPosistion));
+		const segments = [{ray}];
+		const distance = canvas.grid.grid.measureDistances(segments, {gridSpaces:true});
+
+		return distance[0]
+
+		//TODO, just look up what core uses to measure distances between grid points! Fucking dumby!!
+		// const moveBaseCost = this.getSceneGridDistance();
+		// const xDistance = Math.pow(nodeA.gridPosistion.x - nodeB.gridPosistion.x, 2);
+		// const yDistance = Math.pow(nodeA.gridPosistion.y - nodeB.gridPosistion.y, 2);
+
+		// return Math.sqrt(xDistance + yDistance) * moveBaseCost;
+
+
+
+
+		// const xDistance = Math.abs(nodeA.gridPosistion.x - nodeB.gridPosistion.x);
+		// const yDistance = Math.abs(nodeA.gridPosistion.y - nodeB.gridPosistion.y);
+		// const remaining = Math.abs(xDistance - yDistance);
+
+		// const moveBaseCost = this.getSceneGridDistance();
+		// // const moveDiagonalCostMultiplier = getDiagonalMovementCostMultiplier();
+		// const moveDiagonalCostMultiplier = this.getDiagonalMovementCostMultiplier()-1;
+
+		// //TODO, add checks here for tile terrian costs for the tile that you enter.
+			
+
+		// return moveDiagonalCostMultiplier * moveBaseCost * Math.min(xDistance, yDistance) + moveBaseCost * remaining;
+		// // return moveDiagonalCostMultiplier * Math.min(xDistance, yDistance) + moveBaseCost * remaining;
 	}
 
-	//No Valid Path to target from start
-	console.log(`No Path found from: ${startGridPosistion.x},${startGridPosistion.y} to ${targetGridPosistion.x},${targetGridPosistion.y}`)
-	return null;
-}
+	static getLowestFCostNode(openList, closeList){
+		let lowestNode = openList[0];
+		let indexOfLowest = 0;
+		let index = 0;
 
-function calculateDistance(nodeA, nodeB){
-	const xDistance = Math.abs(nodeA.gridPosistion.x - nodeB.gridPosistion.x);
-	const yDistance = Math.abs(nodeA.gridPosistion.y - nodeB.gridPosistion.y);
-	const remaining = Math.abs(xDistance - yDistance);
-
-	const moveBaseCost = getSceneGridDistance();
-	// const moveDiagonalCostMultiplier = getDiagonalMovementCostMultiplier();
-	const moveDiagonalCostMultiplier = getDiagonalMovementCostMultiplier()-1;
-
-	//TODO, add checks here for tile terrian costs for the tile that you enter.
-	
-
-	return moveDiagonalCostMultiplier * moveBaseCost * Math.min(xDistance, yDistance) + moveBaseCost * remaining;
-
-	// if(remaining == 1){ // true is not diagonal movement
-	// 	return moveBaseCost;
-	// } else if (remaining == 0){
-	// 	return moveDiagonalCostMultiplier * moveBaseCost;
-	// } else {
-	// 	return moveDiagonalCostMultiplier * moveBaseCost * Math.min(xDistance, yDistance) + moveBaseCost * remaining;
-	// }
-
-	// return moveDiagonalCostMultiplier * Math.min(xDistance, yDistance) + moveBaseCost * remaining;
-}
-
-function getLowestFCostNode(openList, closeList){
-	let lowestNode = openList[0];
-	let indexOfLowest = 0;
-	let index;
-	for(const node of openList){
-		if(node.fCost < lowestNode.fCost){
-			lowestNode = node;
-			indexOfLowest = index;
+		for(const node of openList){
+			if(node.fCost <= lowestNode.fCost && node.hCost < lowestNode.hCost){
+				lowestNode = node;
+				indexOfLowest = index;
+			}
+			index ++;
 		}
-		index ++;
+
+		//remove lowest from the openList Array
+		openList.splice(indexOfLowest, 1);
+		closeList.push(lowestNode);
+		return lowestNode;
 	}
 
-	//remove lowest from the openList Array
-	openList.splice(indexOfLowest, 1);
-	closeList.push(lowestNode);
-	return lowestNode;
-}
+	static traceBackPath(endNode){
+		let pathNodeArray = [];
+		pathNodeArray.push(endNode);
 
-function traceBackPath(endNode){
-	let pathNodeArray = [];
-	pathNodeArray.push(endNode);
+		let currentNode = endNode;
 
-	let currentNode = endNode;
+		while(currentNode.parent){
+			pathNodeArray.push(currentNode.parent);
+			currentNode = currentNode.parent;
+		}
 
-	while(currentNode.cameFromNode){
-		pathNodeArray.push(currentNode.cameFromNode);
-		currentNode = currentNode.cameFromNode;
+		return pathNodeArray.reverse();
 	}
 
-	return pathNodeArray.reverse();
-}
-
-function equateNodes(nodeA, nodeB){
-	return (nodeA.gridPosistion.x === nodeB.gridPosistion.x && nodeA.gridPosistion.y === nodeB.gridPosistion.y)
-}
-
-function generateWalkablePathfindingGraphGrid(){
-	clearDrawPathfinding();
-
-	const token = canvas.tokens.controlled[0];
-	if(!token){
-		ui.notifications.warn("No token Selected");
-		return;
+	static equateNodes(nodeA, nodeB){
+		return (nodeA.gridPosistion.x === nodeB.gridPosistion.x && nodeA.gridPosistion.y === nodeB.gridPosistion.y)
 	}
-	const distance = getTokenMoveDistance(token);
-	const gridCellSize = canvas.grid.size;
-	const rootNode = `${((token.x + token.hitArea.width/2) - Math.floor(gridCellSize/2)) / gridCellSize},${((token.y + token.hitArea.height/2) - Math.floor(gridCellSize/2)) / gridCellSize}`;
-	
-	//initialise array of arrays with values set as Infinity
-	const cost = new Array(parseInt(canvas.grid.width/gridCellSize)).fill(Infinity).map(() => new Array(parseInt(canvas.grid.height/gridCellSize)).fill(Infinity));
-	cost[((token.x + token.hitArea.width/2) - Math.floor(gridCellSize/2)) / gridCellSize][((token.y + token.hitArea.height/2) - Math.floor(gridCellSize/2)) / gridCellSize] = 0;
-	
-	let toCheck = new Set([rootNode]);
-	let toCheckHolder = new Set();
 
-	let canEnter = new Set();
-	let canEnterRunning = new Set();
-	console.log(cost)
+	static generateWalkablePathfindingGraphGrid(){
+		this.clearDrawPathfinding();
 
-	while(toCheck.size){
-		for(let node of toCheck){
-			let nodeX = parseInt(node.split(',')[0]);
-			let nodeY = parseInt(node.split(',')[1]);
+		const token = canvas.tokens.controlled[0];
+		if(!token){
+			ui.notifications.warn("No token Selected");
+			return;
+		}
+		const distance = this.getTokenMoveDistance(token);
+		const gridCellSize = canvas.grid.size;
+		const rootNode = `${((token.x + token.hitArea.width/2) - Math.floor(gridCellSize/2)) / gridCellSize},${((token.y + token.hitArea.height/2) - Math.floor(gridCellSize/2)) / gridCellSize}`;
+		
+		//initialise array of arrays with values set as Infinity
+		const cost = new Array(parseInt(canvas.grid.width/gridCellSize)).fill(Infinity).map(() => new Array(parseInt(canvas.grid.height/gridCellSize)).fill(Infinity));
+		cost[((token.x + token.hitArea.width/2) - Math.floor(gridCellSize/2)) / gridCellSize][((token.y + token.hitArea.height/2) - Math.floor(gridCellSize/2)) / gridCellSize] = 0;
+		
+		let toCheck = new Set([rootNode]);
+		let toCheckHolder = new Set();
 
-			for(let x = -1; x<2; x++){
-				for(let y = -1; y<2; y++){
-					if(x==0 && y==0){
-						continue;
-					}
-					let neighbourX = nodeX + x;
-					let neighbourY = nodeY + y;
-					let rayTest = new Ray(gridPointToCanvasPoint({x:nodeX, y:nodeY}), gridPointToCanvasPoint({x:neighbourX, y:neighbourY}));
+		let canEnter = new Set();
+		let canEnterRunning = new Set();
+
+		while(toCheck.size){
+			for(let node of toCheck){
+				let nodeX = parseInt(node.split(',')[0]);
+				let nodeY = parseInt(node.split(',')[1]);
+
+				for(let x = -1; x<2; x++){
+					for(let y = -1; y<2; y++){
+						if(x==0 && y==0){
+							continue;
+						}
+						let neighbourX = nodeX + x;
+						let neighbourY = nodeY + y;
+						let rayTest = new Ray(this.gridPointToCanvasPoint({x:nodeX, y:nodeY}), this.gridPointToCanvasPoint({x:neighbourX, y:neighbourY}));
+						
+
+						if (CONFIG.Canvas.losBackend.testCollision(rayTest.A,rayTest.B, {mode:"any",type:'move'})){
+							continue;
+						}
+
+						// if(canvas.walls.checkCollision(rayTest, {origin: rayTest.A}).length){
+						// 	continue;
+						// }
+
+						if(Math.abs(x) == Math.abs(y) && this.getDiagonalMovementType() != "555"){ // check for diagnals
+							const constToEnter = this.getSceneGridDistance() * this.getDiagonalMovementCostMultiplier();
 					
+							if(cost[neighbourX][neighbourY] > constToEnter + cost[nodeX][nodeY] - this.getSceneGridDistance() * 0.5 && distance >= constToEnter + cost[nodeX][nodeY] - this.getSceneGridDistance() * 0.5){
+								cost[neighbourX][neighbourY] = cost[nodeX][nodeY] + constToEnter;
+								toCheckHolder.add(`${neighbourX},${neighbourY}`);
+								canEnter.add(`${neighbourX}, ${neighbourY}`);
 
-					if (CONFIG.Canvas.losBackend.testCollision(rayTest.A,rayTest.B, {mode:"any",type:'move'})){
-						continue;
-					}
-
-					// if(canvas.walls.checkCollision(rayTest, {origin: rayTest.A}).length){
-					// 	continue;
-					// }
-
-					if(Math.abs(x) == Math.abs(y) && getDiagonalMovementType() != "555"){ // check for diagnals
-						const constToEnter = getSceneGridDistance() * getDiagonalMovementCostMultiplier();
-				
-						if(cost[neighbourX][neighbourY] > constToEnter + cost[nodeX][nodeY] - getSceneGridDistance() * 0.5 && distance >= constToEnter + cost[nodeX][nodeY] - getSceneGridDistance() * 0.5){
-							cost[neighbourX][neighbourY] = cost[nodeX][nodeY] + constToEnter;
-							toCheckHolder.add(`${neighbourX},${neighbourY}`);
-							canEnter.add(`${neighbourX}, ${neighbourY}`);
-
-							if(canEnterRunning.has(`${neighbourX}, ${neighbourY}`)){
-								canEnterRunning.delete(`${neighbourX}, ${neighbourY}`);
+								if(canEnterRunning.has(`${neighbourX}, ${neighbourY}`)){
+									canEnterRunning.delete(`${neighbourX}, ${neighbourY}`);
+								}
 							}
-						}
-						else if(cost[neighbourX][neighbourY] > constToEnter + cost[nodeX][nodeY] - getSceneGridDistance() * 0.5 && distance*2 >= constToEnter + cost[nodeX][nodeY] - getSceneGridDistance() * 0.5){
-							cost[neighbourX][neighbourY] = cost[nodeX][nodeY] + constToEnter;
-							toCheckHolder.add(`${neighbourX},${neighbourY}`);
+							else if(cost[neighbourX][neighbourY] > constToEnter + cost[nodeX][nodeY] - this.getSceneGridDistance() * 0.5 && distance*2 >= constToEnter + cost[nodeX][nodeY] - this.getSceneGridDistance() * 0.5){
+								cost[neighbourX][neighbourY] = cost[nodeX][nodeY] + constToEnter;
+								toCheckHolder.add(`${neighbourX},${neighbourY}`);
 
-							if(!canEnter.has(`${neighbourX}, ${neighbourY}`)){
+								if(!canEnter.has(`${neighbourX}, ${neighbourY}`)){
+									canEnterRunning.add(`${neighbourX}, ${neighbourY}`);
+								}
+							}
+
+						} else {
+							const constToEnter = this.getSceneGridDistance();
+							if(cost[neighbourX][neighbourY] > constToEnter + cost[nodeX][nodeY] - this.getSceneGridDistance() * 0.5 && distance >= constToEnter + cost[nodeX][nodeY]- this.getSceneGridDistance() * 0.5){
+								cost[neighbourX][neighbourY] = cost[nodeX][nodeY] + constToEnter;
+								toCheckHolder.add(`${neighbourX},${neighbourY}`);
+								canEnter.add(`${neighbourX}, ${neighbourY}`);
+
+								if(canEnterRunning.has(`${neighbourX}, ${neighbourY}`)){
+									canEnterRunning.delete(`${neighbourX}, ${neighbourY}`);
+								}
+							}
+							else if(cost[neighbourX][neighbourY] > constToEnter + cost[nodeX][nodeY] - this.getSceneGridDistance() * 0.5 && distance*2 >= constToEnter + cost[nodeX][nodeY] - this.getSceneGridDistance() * 0.5){
+								cost[neighbourX][neighbourY] = cost[nodeX][nodeY] + constToEnter;
+								toCheckHolder.add(`${neighbourX},${neighbourY}`);
 								canEnterRunning.add(`${neighbourX}, ${neighbourY}`);
-							}
-						}
-
-					} else {
-						const constToEnter = getSceneGridDistance();
-						if(cost[neighbourX][neighbourY] > constToEnter + cost[nodeX][nodeY] - getSceneGridDistance() * 0.5 && distance >= constToEnter + cost[nodeX][nodeY]- getSceneGridDistance() * 0.5){
-							cost[neighbourX][neighbourY] = cost[nodeX][nodeY] + constToEnter;
-							toCheckHolder.add(`${neighbourX},${neighbourY}`);
-							canEnter.add(`${neighbourX}, ${neighbourY}`);
-
-							if(canEnterRunning.has(`${neighbourX}, ${neighbourY}`)){
-								canEnterRunning.delete(`${neighbourX}, ${neighbourY}`);
-							}
-						}
-						else if(cost[neighbourX][neighbourY] > constToEnter + cost[nodeX][nodeY] - getSceneGridDistance() * 0.5 && distance*2 >= constToEnter + cost[nodeX][nodeY] - getSceneGridDistance() * 0.5){
-							cost[neighbourX][neighbourY] = cost[nodeX][nodeY] + constToEnter;
-							toCheckHolder.add(`${neighbourX},${neighbourY}`);
-							canEnterRunning.add(`${neighbourX}, ${neighbourY}`);
-							
-							if(!canEnter.has(`${neighbourX}, ${neighbourY}`)){
-								canEnterRunning.add(`${neighbourX}, ${neighbourY}`);
+								
+								if(!canEnter.has(`${neighbourX}, ${neighbourY}`)){
+									canEnterRunning.add(`${neighbourX}, ${neighbourY}`);
+								}
 							}
 						}
 					}
 				}
 			}
+		
+			toCheck = toCheckHolder;
+			toCheckHolder = new Set();
 		}
-	
-		toCheck = toCheckHolder;
-		toCheckHolder = new Set();
+
+		console.log(canEnter)
+		console.log(canEnterRunning)
+
+		return {canEnter, canEnterRunning, cost};
 	}
 
-	console.log(canEnter)
-	console.log(canEnterRunning)
+	static drawWalkablePathfindingGraph(graph, debug=false){
+		if(!graph) return;
 
-	return {canEnter, canEnterRunning, cost};
-}
-
-function drawWalkablePathfindingGraph(graph, debug=false){
-
-	if(graph.canEnter){
-		for(let node of graph.canEnter){
-			let nodeX = parseInt(node.split(',')[0]);
-			let nodeY = parseInt(node.split(',')[1]);
-			drawGridSquare("0x0335fc",gridPointToCanvasPoint({
-				x:nodeX,
-				y:nodeY
-			}));
-	
-			if(debug){
-				debugDrawText(gridPointToCanvasPoint({
+		if(graph.canEnter){
+			for(let node of graph.canEnter){
+				let nodeX = parseInt(node.split(',')[0]);
+				let nodeY = parseInt(node.split(',')[1]);
+				this.drawGridSquare(this.gridPointToCanvasPoint({
 					x:nodeX,
 					y:nodeY
-				}), graph.cost[nodeX][nodeY]);
+				}),"0x0335fc");
+		
+				if(debug){
+					this.debugDrawText(this.gridPointToCanvasPoint({
+						x:nodeX,
+						y:nodeY
+					}), graph.cost[nodeX][nodeY]);
+				}
+			}
+		}
+
+		if(graph.canEnterRunning){
+			for(let node of graph.canEnterRunning){
+				let nodeX = parseInt(node.split(',')[0]);
+				let nodeY = parseInt(node.split(',')[1]);
+				this.drawGridSquare(this.gridPointToCanvasPoint({
+					x:nodeX,
+					y:nodeY
+				}),"0xfcdf03");
+
+				if(debug){
+					this.debugDrawText(this.gridPointToCanvasPoint({
+						x:nodeX,
+						y:nodeY
+					}), graph.cost[nodeX][nodeY]);
+				}
 			}
 		}
 	}
 
-	if(graph.canEnterRunning){
-		for(let node of graph.canEnterRunning){
-			let nodeX = parseInt(node.split(',')[0]);
-			let nodeY = parseInt(node.split(',')[1]);
-			drawGridSquare("0xfcdf03", gridPointToCanvasPoint({
-				x:nodeX,
-				y:nodeY
-			}));
+	static drawGridSquare(vector, color="0x00FF00"){
+		
+		if(!canvas.drawPathfinding){
+			canvas.drawPathfinding = [];
+		}
+		
+		const gridCellSize = canvas.grid.size;
+		const index = canvas.drawPathfinding.length;
+		const shrink = 5;
+		
+		canvas.drawPathfinding[index] = new PIXI.Graphics();
+		canvas.drawPathfinding[index].beginFill(color);
+		canvas.drawPathfinding[index].drawRect(
+			vector.x - this.getGridCellSize()/2 + shrink,
+			vector.y - this.getGridCellSize()/2 + shrink,
+			gridCellSize - shrink * 2,
+			gridCellSize - shrink * 2
+		);
+		canvas.drawPathfinding[index].flags = {pathfinding:{}}
+
+		canvas.environment.children[0].addChild(canvas.drawPathfinding[index]);
+
+		canvas.environment.children[0].alpha = 0.5;
+		// canvas.environment.children[0].children[2].addChild(canvas.drawPathfinding[index]);
+	}
+
+	static debugDrawText(vector, text){
+
+		if(!canvas.drawPathfindingDebug){
+			canvas.drawPathfindingDebug = [];
+		}
+		const color = "0x000000"; 
+		const index = canvas.drawPathfindingDebug.length;
+		// Options for our "advanced" text
+		const textOptions = {
+			font: "bold 64px Roboto", // Set  style, size and font
+			fill: '#3498db', // Set fill color to blue
+			align: 'center', // Center align the text, since it's multiline
+			stroke: '#34495e', // Set stroke color to a dark blue gray color
+			strokeThickness: 20, // Set stroke thickness to 20
+			lineJoin: 'round' // Set the lineJoin to round
+		}
+
+		canvas.drawPathfindingDebug[index] = new PIXI.Text(text, textOptions);
+		canvas.drawPathfindingDebug[index].anchor.x = 0.5;
+		canvas.drawPathfindingDebug[index].anchor.y = 0.5;
+		canvas.drawPathfindingDebug[index].x = vector.x;
+		canvas.drawPathfindingDebug[index].y = vector.y;
+		canvas.drawPathfindingDebug[index].flags = {pathfinding:{}}
+
+		canvas.environment.children[0].addChild(canvas.drawPathfindingDebug[index]);
+	}
+
+	static getTokenMoveDistance(token){
+		const gameSystemId = game.system.id;
+		if(parseFloat(game.version) < 10){
+			switch(gameSystemId){
+				case "dnd5e":
+					return token.actor.data.data.attributes.movement.walk;
+				case "dnd4e":
+					return token.actor.data.data.movement.walk.value;
+			}
+		
+			return token.actor.data.data.attributes.movement.walk;
+
+		} else {
+			switch(gameSystemId){
+				case "dnd5e":
+					return token.actor.system.attributes.movement.walk;
+				case "dnd4e":
+					return token.actor.system.movement.walk.value ;
+			}
+			return token.actor.system.attributes.movement.walk;
+		}
+
+	}
+
+	static gridPointToCanvasPoint(point){
+		const gridCellSize = canvas.grid.size;
+		return{x: (point.x * gridCellSize + Math.floor(gridCellSize/2)), y: (point.y * gridCellSize + Math.floor(gridCellSize/2))}
+	}
+
+	static drawGridCordToCanvasCord(){
+
+		const gridCellSize = canvas.grid.size;
+		const canvasWidth = parseInt(canvas.grid.width/gridCellSize);
+		const canvasHeight = parseInt(canvas.grid.height/gridCellSize);
+		
+		for(let width = 0; width < canvasWidth; width++){
+			for(let height = 0; height < canvasHeight; height++){
+				this.debugDrawText(this.gridPointToCanvasPoint({
+					x:width,
+					y:height
+				}), `${width}, ${height}`);
+			}
+		}
+	}
+
+	static drawGridNumbers(){
+
+	}
+
+	static drawPathGrid(path, debug=false){
+		for(const node of path){
+			this.drawGridSquare(this.gridPointToCanvasPoint({
+				x:node.gridPosistion.x,
+				y:node.gridPosistion.y
+			}),"0xfcdf03");
 
 			if(debug){
-				debugDrawText(gridPointToCanvasPoint({
-					x:nodeX,
-					y:nodeY
-				}), graph.cost[nodeX][nodeY]);
+				this.debugDrawText(this.gridPointToCanvasPoint({
+					x:node.gridPosistion.x,
+					y:node.gridPosistion.y
+				}), "");
 			}
 		}
 	}
 }
-
-function drawGridSquare(color="0x00FF00", vector){
-	
-	if(!canvas.drawPathfinding){
-		canvas.drawPathfinding = [];
-	}
-	
-	const gridCellSize = canvas.grid.size;
-	const index = canvas.drawPathfinding.length;
-	const shrink = 5;
-	
-	canvas.drawPathfinding[index] = new PIXI.Graphics();
-	canvas.drawPathfinding[index].beginFill(color);
-	canvas.drawPathfinding[index].drawRect(
-		vector.x - getGridCellSize()/2 + shrink,
-		vector.y - getGridCellSize()/2 + shrink,
-		gridCellSize - shrink * 2,
-		gridCellSize - shrink * 2
-	);
-	canvas.drawPathfinding[index].flags = {pathfinding:{}}
-
-	canvas.environment.children[0].addChild(canvas.drawPathfinding[index]);
-
-	// canvas.environment.children[0].alpha = 0.5;
-	// canvas.environment.children[0].children[2].addChild(canvas.drawPathfinding[index]);
-}
-
-function debugDrawText(vector, text){
-
-	if(!canvas.drawPathfindingDebug){
-		canvas.drawPathfindingDebug = [];
-	}
-	const color = "0x000000"; 
-	const index = canvas.drawPathfindingDebug.length;
-	// Options for our "advanced" text
-	const textOptions = {
-		font: "bold 64px Roboto", // Set  style, size and font
-		fill: '#3498db', // Set fill color to blue
-		align: 'center', // Center align the text, since it's multiline
-		stroke: '#34495e', // Set stroke color to a dark blue gray color
-		strokeThickness: 20, // Set stroke thickness to 20
-		lineJoin: 'round' // Set the lineJoin to round
-	}
-
-	canvas.drawPathfindingDebug[index] = new PIXI.Text(text, textOptions);
-	canvas.drawPathfindingDebug[index].anchor.x = 0.5;
-    canvas.drawPathfindingDebug[index].anchor.y = 0.5;
-	canvas.drawPathfindingDebug[index].x = vector.x;
-	canvas.drawPathfindingDebug[index].y = vector.y;
-	canvas.drawPathfindingDebug[index].flags = {pathfinding:{}}
-
-	canvas.environment.children[0].addChild(canvas.drawPathfindingDebug[index]);
-}
-
-function getTokenMoveDistance(token){
-	const gameSystemId = game.system.id;
-	if(parseFloat(game.version) < 10){
-		switch(gameSystemId){
-			case "dnd5e":
-				return token.actor.data.data.attributes.movement.walk;
-			case "dnd4e":
-				return token.actor.data.data.movement.walk.value;
-		}
-	
-		return token.actor.data.data.attributes.movement.walk;
-
-	} else {
-		switch(gameSystemId){
-			case "dnd5e":
-				return token.actor.system.attributes.movement.walk;
-			case "dnd4e":
-				return token.actor.system.movement.walk.value ;
-		}
-		return token.actor.system.attributes.movement.walk;
-	}
-
-}
-
-function canvasPointToGridPoint(point){
-	const gridSize = canvas.grid.size;
-	return{x: (point.x - Math.floor(gridSize/2)) / gridSize, y:(point.y - Math.floor(gridSize/2)) / gridSize}
-}
-
-function gridPointToCanvasPoint(point){
-	const gridCellSize = canvas.grid.size;
-	return{x: (point.x * gridCellSize + Math.floor(gridCellSize/2)), y: (point.y * gridCellSize + Math.floor(gridCellSize/2))}
-}
-
-function gridCordToCanvasCord(){
-
-}
-
