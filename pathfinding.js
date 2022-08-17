@@ -267,7 +267,6 @@ export class Pathfinding{
 
 		while(openList.length > 0){
 			const currentNode = this.getLowestFCostNode(openList, closeList);
-			// if(equateNodes(currentNode, endNode)){
 			if(currentNode == endNode){
 				return this.traceBackPath(endNode);
 			}
@@ -275,7 +274,6 @@ export class Pathfinding{
 			for(const neighbour of currentNode.neighbours){
 				if(!neighbour) continue; //don't search through empty nodes
 
-				// if(checkNodeInArray(neighbourNode, closeList)){
 				if(closeList.includes(neighbour.node)){
 					continue; // This node has already been searched before
 				}
@@ -283,7 +281,6 @@ export class Pathfinding{
 				//TODO Add checks here to see if this node can be walked on, if there are other tokens or tiles on it that may prevent movement
 
 				let potentialGCost = currentNode.gCost + this.calculateDistance(currentNode, neighbour.node);
-				
 				// let potentialGCost = currentNode.gCost + this.costToEnterGrid(currentNode, neighbour.node);
 
 				if(potentialGCost < neighbour.node.gCost){
@@ -338,30 +335,7 @@ export class Pathfinding{
 		const distance = canvas.grid.grid.measureDistances(segments, {gridSpaces:true});
 
 		return distance[0]
-
-		//TODO, just look up what core uses to measure distances between grid points! Fucking dumby!!
-		// const moveBaseCost = this.getSceneGridDistance();
-		// const xDistance = Math.pow(nodeA.gridPosistion.x - nodeB.gridPosistion.x, 2);
-		// const yDistance = Math.pow(nodeA.gridPosistion.y - nodeB.gridPosistion.y, 2);
-
-		// return Math.sqrt(xDistance + yDistance) * moveBaseCost;
-
-
-
-
-		// const xDistance = Math.abs(nodeA.gridPosistion.x - nodeB.gridPosistion.x);
-		// const yDistance = Math.abs(nodeA.gridPosistion.y - nodeB.gridPosistion.y);
-		// const remaining = Math.abs(xDistance - yDistance);
-
-		// const moveBaseCost = this.getSceneGridDistance();
-		// // const moveDiagonalCostMultiplier = getDiagonalMovementCostMultiplier();
-		// const moveDiagonalCostMultiplier = this.getDiagonalMovementCostMultiplier()-1;
-
 		// //TODO, add checks here for tile terrian costs for the tile that you enter.
-			
-
-		// return moveDiagonalCostMultiplier * moveBaseCost * Math.min(xDistance, yDistance) + moveBaseCost * remaining;
-		// // return moveDiagonalCostMultiplier * Math.min(xDistance, yDistance) + moveBaseCost * remaining;
 	}
 
 	static getLowestFCostNode(openList, closeList){
@@ -658,5 +632,23 @@ export class Pathfinding{
 				}), "");
 			}
 		}
+	}
+
+	static pathToMeasure(path){
+		const token = canvas.tokens.controlled[0];
+		if(!token){
+			ui.notifications.warn("No token Selected");
+			return;
+		}
+		const ruler = canvas.controls.ruler;
+		
+		ruler.clear();
+		ruler._state = Ruler.STATES.STARTING;
+
+
+		for(const segment of path){
+			ruler._addWaypoint(this.gridPointToCanvasPoint(segment.gridPosistion));
+		}		
+		ruler.measure(canvas.app.renderer.plugins.interaction.mouse.getLocalPosition(canvas.stage));
 	}
 }
