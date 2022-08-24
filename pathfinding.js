@@ -528,18 +528,16 @@ export class Pathfinding{
 		
 		canvas.drawPathfinding[index] = new PIXI.Graphics();
 		canvas.drawPathfinding[index].beginFill(color);
+		canvas.drawPathfinding[index].alpha = 0.5;
 		canvas.drawPathfinding[index].drawRect(
 			vector.x - this.getGridCellSize()/2 + shrink,
 			vector.y - this.getGridCellSize()/2 + shrink,
 			gridCellSize - shrink * 2,
 			gridCellSize - shrink * 2
 		);
+		
 		canvas.drawPathfinding[index].flags = {pathfinding:{}}
-
 		canvas.environment.children[0].addChild(canvas.drawPathfinding[index]);
-
-		canvas.environment.children[0].alpha = 0.5;
-		// canvas.environment.children[0].children[2].addChild(canvas.drawPathfinding[index]);
 	}
 
 	static debugDrawText(vector, text){
