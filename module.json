@@ -10,14 +10,14 @@
 }],
   "version": "0.0.0",
   "title": "Pathfinding",
-  "minimumCoreVersion": "9",
-	"compatibleCoreVersion": "10",
+  "minimumCoreVersion": "10",
+  "compatibleCoreVersion": "10",
   "compatibility": {
-    "minimum": "9.268",
-    "verified": 10
+    "minimum": "10",
+    "verified": "10"
   },
   "esmodules": [
-    "pathfinding.js"
+    "scripts/pathfinding.js"
   ],
    "socket": true,
   "url": "https://gitlab.com/EndlesNights",
