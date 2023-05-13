@@ -1,2 +1,2 @@
-# FoundryPathfinding
-functions for pathfinding through scenes within the Foundry VTT
+# Tactical Path
+Functions for pathfinding through scenes within the Foundry VTT

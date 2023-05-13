@@ -1,6 +1,7 @@
 {
-  "name": "pathfinding",
-  "description": "Pathfinding",
+  "id": "tactical-path",
+  "title": "Tactical Path",
+  "description": "Draws a tactical pathway showing all the valid spaces a token may move to",
   "author": "EndlesNights#9000",
   "authors":[{
     "name": "EndlesNights",
@@ -9,18 +10,14 @@
     "discord": "endlesnights#9000"
 }],
   "version": "0.0.0",
-  "title": "Pathfinding",
-  "minimumCoreVersion": "10",
-  "compatibleCoreVersion": "10",
-  "compatibility": {
-    "minimum": "10",
-    "verified": "10"
-  },
+	"compatibility": {
+		"minimum": "10",
+		"verified": "10"  
+	},
   "esmodules": [
     "scripts/pathfinding.js"
   ],
-   "socket": true,
-  "url": "https://gitlab.com/EndlesNights",
+  "url": "https://github.com/EndlesNights/FoundryTacticalPathfinding",
   "manifest": "https://gitlab.com/EndlesNights",
   "download": "https://gitlab.com/EndlesNights"
 }
