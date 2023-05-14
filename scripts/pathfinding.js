@@ -76,14 +76,18 @@ Hooks.once("init", async function() {
 
 });
 
-Hooks.on("controlToken", (data,isControled) =>{
-
+Hooks.on("controlToken",(data, isControled) =>{
 	game.Pathfinding.clearDrawPathfinding();
 
 	if(!isControled){ return; }
 	if(canvas.tokens.controlled.length !== 1){return;}
 
 	game.Pathfinding.drawCurrentTacticalGrid(game.settings.get(MOD_ID, "tacticalPathDebugMode"));
+});
+
+Hooks.once("ready", () => {
+	//temp stop gap, as controlToken gets called with isControled as true for owned for players with a primary Character selected at load time between during initializeCanvas
+	game.Pathfinding.clearDrawPathfinding();
 });
 
 Hooks.on("updateToken", (tokenDoc, updateData, something, userID) => {
