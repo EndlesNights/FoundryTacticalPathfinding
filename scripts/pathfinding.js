@@ -16,6 +16,40 @@ Hooks.once("init", async function() {
 		type: Boolean
 	});
 
+	game.settings.register(MOD_ID, "tacticalPathDrawOnSingleTokenSelect", {
+		name: "Draw Tactical Grid on Select",
+		hint: "Draw the initial tactical grid upon selected a single token.",
+		scope: "client",
+		config: true,
+		default: true,
+		type: Boolean
+	});
+
+	game.settings.register(MOD_ID, "SpeedAttribute", {
+		name: "Movment Speed Attribute",
+		hint: "The attribute that defines a token's walking speed.",
+		scope: "world",
+		config: true,
+		type: String,
+		default: getSystemDefaultSpeedAttribute(),
+	});
+
+	// game.settings.register(MOD_ID, "primaryColor", {
+	// 	name: "Primary Grid Color"
+	// });
+	
+	// //                                     module        key             options
+	// new window.Ardittristan.ColorSetting(MOD_ID, "primaryColor", {
+	// 	name: "Primary Grid Color",      // The name of the setting in the settings menu
+	// 	hint: "Click on the button",   // A description of the registered setting and its behavior
+	// 	label: "Color Picker",         // The text label used in the button
+	// 	restricted: false,             // Restrict this setting to gamemaster only?
+	// 	defaultColor: "#000000ff",     // The default color of the setting
+	// 	scope: "client",               // The scope of the setting
+	// 	onChange: (value) => {}        // A callback function which triggers when the setting is changed
+	// })
+
+
 	game.keybindings.register(MOD_ID, "drawCurrentTacticalGridBind", {
 		name: "Draw Token Tactical Grid",
 		hint: "Draws the TacticalGrid for the current selected tokens.",
@@ -57,6 +91,35 @@ Hooks.on("updateToken", (tokenDoc, updateData, something, userID) => {
 		game.Pathfinding.clearDrawPathfinding();
 	}
 });
+
+function getSystemDefaultSpeedAttribute(){
+	switch (game.system.id) {
+		case "CoC7":
+			return "actor.system.attribs.mov.value";
+		case "dcc":
+			return "actor.system.attributes.speed.value";
+		case "dnd4e":
+			return "actor.system.movement.walk.value";
+		case "dnd5e":
+			return "actor.system.attributes.movement.walk";
+		case "lancer":
+			return "actor.system.derived.speed";
+		case "pf1":
+		case "D35E":
+			return "actor.system.attributes.speed.land.total";
+		case "sfrpg":
+			return "actor.system.attributes.speed.value";
+		case "shadowrun5e":
+			return "actor.system.movement.walk.value";
+		case "swade":
+			return "actor.system.stats.speed.adjusted";
+		case "ds4":
+			return "actor.system.combatValues.movement.total";
+		case "splittermond":
+			return "actor.derivedValues.speed.value";
+	}
+	return "";
+}
 
 export class Pathfinding{
 	
@@ -703,27 +766,7 @@ export class Pathfinding{
 	}
 
 	static getTokenMoveDistance(token){
-		const gameSystemId = game.system.id;
-		if(parseFloat(game.version) < 10){
-			switch(gameSystemId){
-				case "dnd5e":
-					return token.actor.data.data.attributes.movement.walk;
-				case "dnd4e":
-					return token.actor.data.data.movement.walk.value;
-			}
-		
-			return token.actor.data.data.attributes.movement.walk;
-
-		} else {
-			switch(gameSystemId){
-				case "dnd5e":
-					return token.actor.system.attributes.movement.walk;
-				case "dnd4e":
-					return token.actor.system.movement.walk.value ;
-			}
-			return token.actor.system.attributes.movement.walk;
-		}
-
+		return getProperty(token, game.settings.get(MOD_ID,"SpeedAttribute"));
 	}
 
 	static gridPointToCanvasPoint(point){
