@@ -1,14 +1,73 @@
 import GraphNode from "./graph-node.js";
+const MOD_ID = 'tactical-path';
 
 Hooks.once("init", async function() {
-	console.log("Pathfinding Module Loaded")
+	console.log("Tactical Pathfinding Module Loaded")
 
 	game.Pathfinding = Pathfinding;
 	game.GraphNode = GraphNode;
+
+	game.settings.register(MOD_ID, "tacticalPathDebugMode", {
+		name: "Tactical Grid Debug Mode",
+		hint: "Enables the debug mode for Tactical Grid, which will draw numbers ontop of any of the highlighted squares",
+		scope: "client",
+		config: true,
+		default: false,
+		type: Boolean
+	});
+
+	game.keybindings.register(MOD_ID, "drawCurrentTacticalGridBind", {
+		name: "Draw Token Tactical Grid",
+		hint: "Draws the TacticalGrid for the current selected tokens.",
+		editable: [
+			{
+				key: "KeyM"
+			}
+		],
+		precedence: CONST.KEYBINDING_PRECEDENCE.NORMAL,
+		onDown: () => { game.Pathfinding.drawCurrentTacticalGrid(game.settings.get(MOD_ID, "tacticalPathDebugMode")); }
+	});
+
+	game.keybindings.register(MOD_ID, "clearDrawPathfindingBind", {
+		name: "Clears Tatical Grids",
+		hint: "Clears any currently drawn TaticalGrids",
+		editable: [
+			{
+				key: "KeyN"
+			}
+		],
+		precedence: CONST.KEYBINDING_PRECEDENCE.NORMAL,
+		onDown: () => { game.Pathfinding.clearDrawPathfinding(); }
+	});
+
 });
 
+Hooks.on("controlToken", (data,isControled) =>{
+
+	game.Pathfinding.clearDrawPathfinding();
+
+	if(!isControled){ return; }
+	if(canvas.tokens.controlled.length !== 1){return;}
+
+	game.Pathfinding.drawCurrentTacticalGrid(game.settings.get(MOD_ID, "tacticalPathDebugMode"));
+});
+
+Hooks.on("updateToken", (tokenDoc, updateData, something, userID) => {
+	if(tokenDoc.object.controlled){
+		game.Pathfinding.clearDrawPathfinding();
+	}
+});
 
 export class Pathfinding{
+	
+	static drawCurrentTacticalGrid(debug=false){
+		// const graph = game.Pathfinding.walkablePathfindingGraph();
+		const graph = this.walkablePathfindingGraph();
+		// const debug = true;
+
+		//if(!graph) return;
+		game.Pathfinding.drawWalkablePathfindingGraph(graph, debug);
+	}
 
 	/**
 	 * clears all PIXI pathfinding drawings from the canvas
@@ -34,7 +93,7 @@ export class Pathfinding{
 	}
 
 	static getSelectedToken(){
-		return actor = canvas.tokens.controlled[0];
+		return canvas.tokens.controlled[0];
 	}
 
 	/**
@@ -439,8 +498,11 @@ export class Pathfinding{
 			toCheckHolder = new Set();
 		}
 
-		console.log(canEnter)
-		console.log(canEnterRunning)
+		if(game.settings.get(MOD_ID, "tacticalPathDebugMode")){
+			console.log(canEnter)
+			console.log(canEnterRunning)
+		}
+
 
 		return {canEnter, canEnterRunning, cost};
 	}

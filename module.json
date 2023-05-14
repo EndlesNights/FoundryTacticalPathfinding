@@ -1,7 +1,7 @@
 {
   "id": "tactical-path",
   "title": "Tactical Path",
-  "description": "Draws a tactical pathway showing all the valid spaces a token may move to",
+  "description": "Draws a tactical pathway showing all the valid spaces a token may move to.",
   "author": "EndlesNights#9000",
   "authors":[{
     "name": "EndlesNights",
