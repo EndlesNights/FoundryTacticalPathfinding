@@ -333,7 +333,7 @@ export class Pathfinding{
 
 		if(startGrid){
 			let rayTest = new Ray(this.gridPointToCanvasPoint(startGrid.gridPosistion), this.gridPointToCanvasPoint(targetGrid.gridPosistion));
-			if (CONFIG.Canvas.losBackend.testCollision(rayTest.A,rayTest.B, {mode:"any",type:'move'})){
+			if (CONFIG.Canvas.polygonBackends.sight.testCollision(rayTest.A,rayTest.B, {mode:"any",type:'move'})){
 				return Infinity;
 			} else {
 				if(targetGrid.gridPosistion.x != startGrid.gridPosistion.x && targetGrid.gridPosistion.y != startGrid.gridPosistion.y){
@@ -507,7 +507,7 @@ export class Pathfinding{
 						let rayTest = new Ray(this.gridPointToCanvasPoint({x:nodeX, y:nodeY}), this.gridPointToCanvasPoint({x:neighbourX, y:neighbourY}));
 						
 
-						if (CONFIG.Canvas.losBackend.testCollision(rayTest.A,rayTest.B, {mode:"any",type:'move'})){
+						if (CONFIG.Canvas.polygonBackends.sight.testCollision(rayTest.A,rayTest.B, {mode:"any",type:'move'})){
 							continue;
 						}
 
@@ -614,7 +614,7 @@ export class Pathfinding{
 						let rayTest = new Ray(this.gridPointToCanvasPoint({x:nodeX, y:nodeY}), this.gridPointToCanvasPoint({x:neighbourX, y:neighbourY}));
 						
 
-						if (CONFIG.Canvas.losBackend.testCollision(rayTest.A,rayTest.B, {mode:"any",type:'move'})){
+						if (CONFIG.Canvas.polygonBackends.sight.testCollision(rayTest.A,rayTest.B, {mode:"any",type:'move'})){
 							continue;
 						}
 

@@ -9,10 +9,10 @@
     "email": "endlesnights@gmail.com",
     "discord": "endlesnights#9000"
 }],
-  "version": "0.1.0",
+  "version": "0.1.1",
 	"compatibility": {
-		"minimum": "10",
-		"verified": "10"  
+		"minimum": "11",
+		"verified": "11"  
 	},
   "esmodules": [
     "scripts/pathfinding.js"
